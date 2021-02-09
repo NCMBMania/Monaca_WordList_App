@@ -1,0 +1,168 @@
+<template>
+  <div class="page" data-name="new">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="link back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">戻る</span>
+          </a>
+        </div>
+        <div class="title">{{ wordBook.name }}</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="row">
+        <div class="col-auto text-align-center">
+          <div class="block-title">タップで回答が表示されます</div>
+          <div class="block">
+            <p>スワイプで次の単語を表示します</p>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-auto">
+          <span data-progress="0" class="progressbar" id="inline-progressbar"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-auto">
+          <div class="swiper-container swiper-init">
+            <div class="swiper-wrapper">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  return {
+    methods: {
+      getWords: async function() {
+        const { ncmb } = this.$app.data;
+        const Word = ncmb.DataStore('Word');
+        return await Word
+          .relatedTo(this.wordBook, 'words')
+          .equalTo('remember', false)
+          .limit(1000)
+          .fetchAll();
+      },
+      showImage: async function(fileName) {
+        if (!fileName) return '';
+        const { ncmb } = this.$app.data;
+        const file = await ncmb.File.download(fileName, 'blob');
+        const image = await loadImage(file);
+        if (image) {
+          return `<div class="show-image">
+            <img src="${image}" class="image" />
+          </div>`;
+        }
+      },
+      showWords: async function(swiper, words) {
+        const promises = [];
+        words.forEach((w, index) => {
+          promises.push(this.showImage(w.image));
+        });
+        const images = await Promise.all(promises);
+
+        const slides = words.map((w, i) => `
+          <div class="swiper-slide">
+            <div class="card card-outline">
+              <div class="card-header">${w.original}</div>
+              <div class="card-content card-content-padding word">
+                <div class="row">
+                  <div class="col-10 previous">
+                    <div>&nbsp;</div>
+                  </div>
+                  <div class="col-80 margin-vertical content">
+                    ${ images[i] }
+                    <a href="#" class="item-link list-button open">
+                      <div class="item-inner">
+                        <div class="item-title">答えをチェック</div>
+                      </div>
+                    </a>
+                    <div style="display:none" class="answer">
+                      <div class="text">${w.japanese}</div>
+                      <a href="#" class="item-link list-button remember" data-object-id="${w.objectId}">
+                        <div class="item-inner">
+                          <div class="item-title">覚えた</div>
+                        </div>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-10 next">
+                    <div>&nbsp;</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>`
+        );
+        swiper.appendSlide(slides);
+      },
+      updateProgress: function(index, length) {
+        this.$f7.progressbar.set('#inline-progressbar', parseInt(index/length * 100));
+      }
+    },
+    async mounted() {
+      const words = await this.getWords();
+      const swiper = this.$app.swiper.create('.swiper-container', {});
+      await this.showWords(swiper, words);
+      
+      $$('.previous').on('click', e => {
+        if (swiper.realIndex > 0) {
+          swiper.slidePrev();
+          this.updateProgress(swiper.realIndex - 1, swiper.slides.length);
+        }
+      });
+      $$('.next').on('click', e => {
+        if (swiper.realIndex !== words.length) {
+          swiper.slideNext();
+          this.updateProgress(swiper.realIndex + 1, swiper.slides.length);
+        }
+      });
+      $$('.open').on('click', e => {
+        $$(e.target).hide();
+        $$(e.target).parents('.content').find('.answer').show();
+      });
+      $$('.remember').on('click', async e => {
+        const objectId = $$(e.target).parents('a').data('object-id');
+        const word = words.filter(w => w.objectId === objectId)[0];
+        await word.set('remember', true).update();
+        updateWordCount(this.wordBook);
+        swiper.removeSlide(swiper.activeIndex);
+      });
+    },
+  };
+</script>
+
+<style>
+  .word {
+    height: 60vw;
+    vertical-align: middle;
+    align-items: center;
+  }
+  .word .content {
+    height: 60vw;
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    width: 80%;
+  }
+  .word .answer .text {
+    font-size: 30px;
+  }
+  .word .next, .word .previous {
+    height: 60vw;
+    font-size: 40px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .show-image img {
+    object-fit: cover;
+    width: 20vw;
+    height: 20vw;
+  }
+</style>

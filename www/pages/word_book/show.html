@@ -1,0 +1,144 @@
+<template>
+  <div class="page" data-name="new">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="link back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">戻る</span>
+          </a>
+        </div>
+        <div class="title">{{ wordBook.name }}</div>
+        <div class="right">
+          <a href="#" class="item-link list-button new-word">
+            <i class="f7-icons">plus</i>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="row">
+        <div class="col text-align-center" id="no_word">
+          <div>まだ単語がありません</div>
+          <a href="#" class="item-link list-button new-word">
+            <div class="item-inner">
+              <div class="item-title">単語を登録する</div>
+            </div>
+          </a>
+        </div>
+        <div id="exist_word" class="col-auto">
+          <div class="row justify-content-center">
+            <p>
+              <button class="button button-fill go-training">
+                トレーニングを開始する
+              </button>
+            </p>
+          </div>
+          <div class="list">
+            <ul>
+
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  return {
+    methods: {
+      getWords: async function() {
+        const { ncmb } = this.$app.data;
+        const Word = ncmb.DataStore('Word');
+        return await Word
+          .relatedTo(this.wordBook, 'words')
+          .equalTo('remember', false)
+          .limit(1000)
+          .fetchAll();
+      },
+      showWords: function(words) {
+        $$('#exist_word ul').html(words.map(w => {
+          return `<li class="swipeout">
+            <div class="swipeout-content">
+              <a href="#" data-object-id="${w.objectId}" class="show_word">
+                <div class="item-content">
+                    <div class="item-media">
+                      <i class="f7-icons">textformat</i>
+                    </div>
+                    <div class="item-inner">
+                        <div class="item-title">
+                          ${w.original}
+                        </div>
+                        <div class="item-after">
+                          ${w.japanese }
+                        </div>
+                    </div>
+                </div>
+              </a>
+            </div>
+            <div class="swipeout-actions-left">
+              <a href="#" class="swipeout-delete" data-object-id="${w.objectId}">Delete</a>
+            </div>
+          </li>`;
+        }).join(''));
+      }
+    },
+    async mounted() {
+      $$('.new-word').on('click', e => {
+        this.$router.navigate(
+          `/word_book/{{ this.wordBook.objectId }}/word/new`,
+          {
+            context: {
+              wordBook: this.wordBook
+            }
+          }
+        );
+      });
+      $$('.go-training').on('click', e => {
+        this.$router.navigate(
+          `/word_book/{{ this.wordBook.objectId }}/training`,
+          {
+            context: {
+              wordBook: this.wordBook
+            }
+          }
+        );
+      })
+    },
+    on: {
+      pageBeforeIn: async function(e, page) {
+        const words = await this.getWords();
+        if (words.length === 0) {
+          $$('#exist_word').hide();
+          $$('#no_word').show();
+        } else {
+          $$('#exist_word').show();
+          $$('#no_word').hide();
+          this.showWords(words);
+        }
+        $$('.swipeout-delete').on('click', e => {
+          const objectId = $$(e.target).data('object-id');
+          const word = words.filter(w => w.objectId === objectId)[0];
+          if (word) word.delete();
+          updateWordCount(this.wordBook);
+        });
+        $$('.show_word').on('click', e => {
+          const objectId = $$(e.target).parents('a').data('object-id');
+          const word = words.filter(w => w.objectId === objectId)[0];
+          if (word) {
+            this.$router.navigate(
+              `/word_book/{{ this.wordBook.objectId }}/word/${word.objectId}/edit`,
+              {
+                context: {
+                  wordBook: this.wordBook,
+                  word
+                }
+              }
+            );
+          }
+        });
+      }
+    },
+  };
+</script>

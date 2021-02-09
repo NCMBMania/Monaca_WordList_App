@@ -1,0 +1,107 @@
+<template>
+  <div class="page" data-name="new">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a href="#" class="link back">
+            <i class="icon icon-back"></i>
+            <span class="if-not-md">戻る</span>
+          </a>
+        </div>
+        <div class="title">単語の編集</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="row">
+        <div class="col-auto text-align-center">
+          <div class="block-title">単語を編集してください</div>
+          <div class="block">
+            <p>単語の追加情報として画像も登録できます</p>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="list no-hairlines-md">
+            <ul>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-input-wrap">
+                    <input type="text" name="original" value="{{word.original}}">
+                  </div>
+                </div>
+              </li>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-input-wrap">
+                    <input type="text" name="japanese" value="{{word.japanese}}">
+                  </div>
+                </div>
+              </li>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-input-wrap">
+                    <input type="file" accept="image/*" name="upload" />
+                  </div>
+                </div>
+              </li>
+              <li class="item-content show-image">
+                <img src="{{ word.image }}" class="image" />
+                <input type="hidden" name="image" value="{{word.image}}" />
+              </li>
+            </ul>
+          </div>
+          <a href="#" class="item-link list-button" id="updateWord">
+            <div class="item-inner">
+              <div class="item-title">単語を更新する</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  return {
+    on: {
+      pageBeforeIn: async function(e, page) {
+        $$('.show-image').hide();
+        const { ncmb } = this.$app.data;
+        if (!this.word.image) return;
+        const file = await ncmb.File.download(this.word.image, 'blob');
+        const image = await loadImage(file);
+        $$('.image').attr('src', image);
+        $$('.show-image').show();
+      }
+    },
+    mounted() {
+      $$('#updateWord').on('click', async e => {
+        this.word
+          .set('original', $$('[name="original"]').val())
+          .set('japanese', $$('[name="japanese"]').val())
+          .set('image', $$('[name="image"]').val())
+          .update();
+        this.$router.back();
+      });
+
+      $$('[name="upload"]').on('change', async e => {
+        const {ncmb} = this.$app.data;
+        const d = new Date();
+        const file = e.target.files[0];
+        const name = `${d.getTime()}_${file.name}`;
+        await ncmb.File.upload(name, file);
+        const image = await loadImage(file);
+        $$('.image').attr('src', image);
+        $$('[name="image"]').val(name);
+        $$('.show-image').show();
+      });
+    }
+  };
+</script>
+
+<style>
+  .image {
+    object-fit: cover;
+    width: 40vw;
+    height: 40vw;
+  }
+</style>
