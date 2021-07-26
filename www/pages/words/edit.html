@@ -40,7 +40,7 @@
               <li class="item-content item-input">
                 <div class="item-inner">
                   <div class="item-input-wrap">
-                    <input type="file" accept="image/*" name="upload" />
+                    <input type="file" accept="image/*" name="upload" @change="uploadImage" />
                   </div>
                 </div>
               </li>
@@ -50,7 +50,7 @@
               </li>
             </ul>
           </div>
-          <a href="#" class="item-link list-button" id="updateWord">
+          <a href="#" class="item-link list-button" @click="updateWord">
             <div class="item-inner">
               <div class="item-title">単語を更新する</div>
             </div>
@@ -62,39 +62,32 @@
 </template>
 <script>
   return {
+    methods: {
+      // 単語データを更新する処理
+      updateWord: async function(e) {
+      },
+      // 写真をアップロードして、そのファイル名をhiddenに適用する処理
+      uploadImage: async function(e) {
+      }
+    },
     on: {
       pageBeforeIn: async function(e, page) {
+        // 最初にimgタグを隠す
         $$('.show-image').hide();
+        // NCMBから画像データをBlobで取得
         const { ncmb } = this.$app.data;
         if (!this.word.image) return;
-        const file = await ncmb.File.download(this.word.image, 'blob');
-        const image = await loadImage(file);
+        // 画像をダウンロード
+        
+
+        // BlobをdataURIに変換
+        const image = await this.$app.methods.loadImage(file);
+        // 変換結果をimgタグに反映
         $$('.image').attr('src', image);
+        // imgタグを表示
         $$('.show-image').show();
       }
     },
-    mounted() {
-      $$('#updateWord').on('click', async e => {
-        this.word
-          .set('original', $$('[name="original"]').val())
-          .set('japanese', $$('[name="japanese"]').val())
-          .set('image', $$('[name="image"]').val())
-          .update();
-        this.$router.back();
-      });
-
-      $$('[name="upload"]').on('change', async e => {
-        const {ncmb} = this.$app.data;
-        const d = new Date();
-        const file = e.target.files[0];
-        const name = `${d.getTime()}_${file.name}`;
-        await ncmb.File.upload(name, file);
-        const image = await loadImage(file);
-        $$('.image').attr('src', image);
-        $$('[name="image"]').val(name);
-        $$('.show-image').show();
-      });
-    }
   };
 </script>
 

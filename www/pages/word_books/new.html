@@ -31,7 +31,7 @@
               </li>
             </ul>
           </div>
-          <a href="#" class="item-link list-button" id="saveWordBook">
+          <a href="#" class="item-link list-button" @click="saveWordBook">
             <div class="item-inner">
               <div class="item-title">単語帳を作成する</div>
             </div>
@@ -43,16 +43,10 @@
 </template>
 <script>
   return {
-    mounted() {
-      $$('#saveWordBook').on('click', async (e) => {
-        const { ncmb } = this.$app.data;
-        const wordBook = new (ncmb.DataStore('WordBook'));
-        await wordBook
-          .set('name', $$('[name="name"]').val())
-          .set('words_count', 0)
-          .save();
-        this.$router.back();
-      });
-    }
+    methods: {
+      // 単語帳を作成する処理
+      saveWordBook: async function(e) {
+      },
+    },
   };
 </script>

@@ -11,7 +11,7 @@
         </div>
         <div class="title">{{ wordBook.name }}</div>
         <div class="right">
-          <a href="#" class="item-link list-button new-word">
+          <a href="/word_books/new" class="item-link list-button">
             <i class="f7-icons">plus</i>
           </a>
         </div>
@@ -30,16 +30,20 @@
         <div id="exist_word" class="col-auto">
           <div class="row justify-content-center">
             <p>
-              <button class="button button-fill go-training">
+              <button class="button button-fill" @click="startTraining">
                 トレーニングを開始する
               </button>
             </p>
           </div>
           <div class="list">
             <ul>
-
             </ul>
           </div>
+          <p>
+            <button class="button button-fill" @click="export">
+              エクスポート
+            </button>
+          </p>
         </div>
       </div>
     </div>
@@ -48,15 +52,50 @@
 <script>
   return {
     methods: {
-      getWords: async function() {
-        const { ncmb } = this.$app.data;
-        const Word = ncmb.DataStore('Word');
-        return await Word
-          .relatedTo(this.wordBook, 'words')
-          .equalTo('remember', false)
-          .limit(1000)
-          .fetchAll();
+      // トレーニング画面に移動する処理
+      startTraining: function() {
+        this.$router.navigate(
+          `/word_books/${ this.wordBook.objectId }/training`,
+          {
+            context: {
+              wordBook: this.wordBook
+            }
+          }
+        );
       },
+      // エクスポート処理
+      export: async function() {
+        // 単語一覧の取得
+        const words = await this.$app.methods.getWords(this.wordBook);
+        // 簡易的にCSVの作成
+        const csv = words.map(w => `"${w.original}","${w.japanese}"`).join("\n");
+        // CSVの内容をBlobに変換
+        const blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+        // ファイルとして保存
+        saveAs(blob, "words.csv");
+      },
+      // 単語を削除する処理
+      deleteWord: function(e) {
+      },
+      // 単語画面に移動する処理
+      showWord: function(e) {
+        // 対象になる単語データを取得
+        const objectId = $$(e.target).parents('a').data('object-id');
+        const word = this.words.filter(w => w.objectId === objectId)[0];
+        // 単語がなければ終了
+        if (!word) return;
+        // 単語があれば移動
+        this.$router.navigate(
+          `/word_books/${this.wordBook.objectId}/words/${word.objectId}/edit`,
+          {
+            context: {
+              wordBook: this.wordBook,
+              word
+            }
+          }
+        );
+      },
+      // 単語一覧を表示する
       showWords: function(words) {
         $$('#exist_word ul').html(words.map(w => {
           return `<li class="swipeout">
@@ -84,60 +123,23 @@
         }).join(''));
       }
     },
-    async mounted() {
-      $$('.new-word').on('click', e => {
-        this.$router.navigate(
-          `/word_book/{{ this.wordBook.objectId }}/word/new`,
-          {
-            context: {
-              wordBook: this.wordBook
-            }
-          }
-        );
-      });
-      $$('.go-training').on('click', e => {
-        this.$router.navigate(
-          `/word_book/{{ this.wordBook.objectId }}/training`,
-          {
-            context: {
-              wordBook: this.wordBook
-            }
-          }
-        );
-      })
-    },
     on: {
       pageBeforeIn: async function(e, page) {
-        const words = await this.getWords();
-        if (words.length === 0) {
+        // 単語一覧を取得
+        this.words = await this.$app.methods.getWords(this.wordBook);
+        // 単語の有無で画面の表示を切り替え
+        if (this.words.length === 0) {
           $$('#exist_word').hide();
           $$('#no_word').show();
         } else {
           $$('#exist_word').show();
           $$('#no_word').hide();
-          this.showWords(words);
+          // 単語があれば画面に表示
+          this.showWords(this.words);
+          // 表示した要素に対するイベントを設定
+          $$('.swipeout-delete').on('click', this.deleteWord);
+          $$('.show_word').on('click', this.showWord);
         }
-        $$('.swipeout-delete').on('click', e => {
-          const objectId = $$(e.target).data('object-id');
-          const word = words.filter(w => w.objectId === objectId)[0];
-          if (word) word.delete();
-          updateWordCount(this.wordBook);
-        });
-        $$('.show_word').on('click', e => {
-          const objectId = $$(e.target).parents('a').data('object-id');
-          const word = words.filter(w => w.objectId === objectId)[0];
-          if (word) {
-            this.$router.navigate(
-              `/word_book/{{ this.wordBook.objectId }}/word/${word.objectId}/edit`,
-              {
-                context: {
-                  wordBook: this.wordBook,
-                  word
-                }
-              }
-            );
-          }
-        });
       }
     },
   };

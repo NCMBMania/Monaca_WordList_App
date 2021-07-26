@@ -1,42 +1,9 @@
-const applicationKey = '1f394bd4d2a0a80a45f0c5a86fea448b6b36d5a795ad2ce90ddb6ff7ad136fb2';
-const clientKey = 'cdc44afd241a213a917f35d58344672ad60e72666bbbd7aa44c82172ea4fa398';
-const ncmb = new NCMB(applicationKey, clientKey);
+// NCMBを初期化します
+const applicationKey = 'YOUR_APPLICATION_KEY';    // 自分のアプリケーションキーと書き換えてください
+const clientKey = 'YOUR_CLIENT_KEY';              // 自分のクライアントキーと書き換えてください
+const ncmb = new NCMB(applicationKey, clientKey); // 初期化
 
 const $$ = Dom7;
-
-async function updateWordCount(wordBook) {
-  const Word = ncmb.DataStore('Word');
-  const words = await Word
-    .relatedTo(wordBook, 'words')
-    .equalTo('remember', false)
-    .count()
-    .fetchAll();
-  await wordBook
-    .set('words_count', words.count)
-    .update();
-}
-
-async function loadImage(file) {
-  return await loadFile(file);
-}
-
-async function loadText(file) {
-  return await loadFile(file, 'text');
-}
-
-function loadFile(file, type = 'binary') {
-  return new Promise((res, rej) => {
-    const fr = new FileReader;
-    fr.onload = (result) => {
-      res(fr.result);
-    }
-    if (type === 'text') {
-      fr.readAsText(file);
-    } else {
-      fr.readAsDataURL(file);
-    }
-  });
-}
 
 const app = new Framework7({
   root: '#app', // App root element
@@ -51,21 +18,23 @@ const app = new Framework7({
   },
   // App root methods
   methods: {
-    helloWorld: function () {
-      app.dialog.alert('Hello World!');
+    // 画像の読み込み
+    loadImage: async function(file) {
+      return new Promise((res, rej) => {
+        const fr = new FileReader;
+        fr.onload = (result) => {
+          res(fr.result);
+        }
+        fr.readAsDataURL(file);
+      });
     },
+    // 単語数の更新
+    updateWordCount: async function(wordBook) {
+    },
+    // 単語の取得
+    getWords: async function(wordBook) {
+    }
   },
   // App routes
   routes: routes,
-});
-// Login Screen Demo
-$$('#my-login-screen .login-button').on('click', function () {
-  var username = $$('#my-login-screen [name="username"]').val();
-  var password = $$('#my-login-screen [name="password"]').val();
-
-  // Close login screen
-  app.loginScreen.close('#my-login-screen');
-
-  // Alert username and password
-  app.dialog.alert('Username: ' + username + '<br>Password: ' + password);
 });
